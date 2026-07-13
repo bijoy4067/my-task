@@ -1,5 +1,61 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "./../../services/AuthServiceProvider";
+
+function validate({ email, password }) {
+  const errors = {};
+
+  if (!email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!password) {
+    errors.password = "Password is required.";
+  } else if (password.length < 8) {
+    errors.password = "Password must be at least 8 characters.";
+  }
+
+  return errors;
+}
+
 export default function App() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [touched, setTouched] = useState({});
+  const [error, setError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const errors = validate({ email, password });
+  // Field errors stay hidden until the field is blurred or a submit is attempted.
+  const showError = (field) => (touched[field] || submitted) && errors[field];
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitted(true);
+    setError(null);
+
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await login({ email, password, remember });
+      navigate("/");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div>
       <section className="_social_login_wrapper _layout_main_wrapper">
@@ -91,29 +147,53 @@ export default function App() {
                     <span>Or</span>
                   </div>
 
-                  <form className="_social_login_form">
+                  <form className="_social_login_form" onSubmit={handleSubmit} noValidate>
                     <div className="row">
                       <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                         <div className="_social_login_form_input _mar_b14">
-                          <label className="_social_login_label _mar_b8">
+                          <label
+                            className="_social_login_label _mar_b8"
+                            htmlFor="login_email"
+                          >
                             Email
                           </label>
                           <input
+                            id="login_email"
                             type="email"
                             className="form-control _social_login_input"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            onBlur={() =>
+                              setTouched((prev) => ({ ...prev, email: true }))
+                            }
                           />
+                          {showError("email") && (
+                            <p className="text-danger">{errors.email}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                         <div className="_social_login_form_input _mar_b14">
-                          <label className="_social_login_label _mar_b8">
+                          <label
+                            className="_social_login_label _mar_b8"
+                            htmlFor="login_password"
+                          >
                             Password
                           </label>
                           <input
+                            id="login_password"
                             type="password"
                             className="form-control _social_login_input"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onBlur={() =>
+                              setTouched((prev) => ({ ...prev, password: true }))
+                            }
                           />
+                          {showError("password") && (
+                            <p className="text-danger">{errors.password}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -123,10 +203,10 @@ export default function App() {
                         <div className="form-check _social_login_form_check">
                           <input
                             className="form-check-input _social_login_form_check_input"
-                            type="radio"
-                            name="flexRadioDefault"
+                            type="checkbox"
                             id="flexRadioDefault2"
-                            defaultChecked
+                            checked={remember}
+                            onChange={(e) => setRemember(e.target.checked)}
                           />
 
                           <label
@@ -147,14 +227,23 @@ export default function App() {
                       </div>
                     </div>
 
+                    {error && (
+                      <div className="row">
+                        <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
+                          <p className="text-danger">{error}</p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="row">
                       <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
                         <div className="_social_login_form_btn _mar_t40 _mar_b60">
                           <button
-                            type="button"
+                            type="submit"
                             className="_social_login_form_btn_link _btn1"
+                            disabled={submitting}
                           >
-                            Login now
+                            {submitting ? "Logging in…" : "Login now"}
                           </button>
                         </div>
                       </div>

@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './../../services/AuthServiceProvider';
-import apiFetch from './../../utils/ApiFetcher';
+import { useTheme } from '../../hooks/useTheme';
 
 import Header from "../../components/Header";
 import LeftSideBar from "../../components/LeftSideBar";
@@ -10,23 +9,11 @@ import RightSideBar from "../../components/RightSideBar";
 
 export default function App() {
 
+	// MiddleLayout loads the feed and redirects to /login on a 401, so this page
+	// no longer needs its own probe request.
 	const { logout } = useAuth();
 	const navigate = useNavigate();
-
-	useEffect(() => {
-		let ignore = false;
-
-		apiFetch('/api/feed').then((response) => {
-			if (ignore) return;
-			if (response.status === 401) {
-				navigate('/login');
-			}
-		});
-
-		return () => {
-			ignore = true;
-		};
-	}, [navigate]);
+	const { dark, toggle } = useTheme();
 
 	const handleLogout = async (event) => {
 		event.preventDefault();
@@ -36,10 +23,10 @@ export default function App() {
 	return (
 		<div>
 			{/*Feed Section Start*/}
-			<div className="_layout _layout_main_wrapper">
+			<div className={`_layout _layout_main_wrapper${dark ? ' _dark_wrapper' : ''}`}>
 				{/*Switching Btn Start*/}
 				<div className="_layout_mode_swithing_btn">
-					<button type="button" className="_layout_swithing_btn_link">
+					<button type="button" className="_layout_swithing_btn_link" onClick={toggle}>
 						<div className="_layout_swithing_btn">
 							<div className="_layout_swithing_btn_round"></div>
 						</div>

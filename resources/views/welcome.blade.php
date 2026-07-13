@@ -30,6 +30,8 @@
         <div id="app"></div>
 
         <script src="/assets/js/bootstrap.bundle.min.js" defer></script>
-        <script src="/assets/js/custom.js" defer></script>
+        {{-- custom.js is the static template's script: it grabs DOM nodes on load, before React
+             has rendered any, and throws on the first null — taking the theme toggle and every
+             dropdown down with it. React owns that behaviour now (see useTheme / Header). --}}
     </body>
 </html>
