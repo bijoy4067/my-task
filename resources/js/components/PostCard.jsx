@@ -4,6 +4,7 @@ import { apiFetch, parseErrorMessage } from "../utils/ApiFetcher";
 import { formatTimeAgo } from "../utils/formatTimeAgo";
 import { useDropdown } from "../hooks/useDropdown";
 import { useLikeToggle } from "../hooks/useLikeToggle";
+import CommentList from "./CommentList";
 import LikersModal from "./LikersModal";
 import PostBody from "./PostBody";
 import PostEvent from "./PostEvent";
@@ -15,6 +16,7 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState(null);
     const [showLikers, setShowLikers] = useState(false);
+    const [showComments, setShowComments] = useState(false);
 
     // The card doesn't own the post — the feed does. Patches go back up to useFeed, which
     // re-renders this card with the new counts. No local copy to drift out of sync.
@@ -31,6 +33,14 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
     });
 
     const likers = post.likers_preview ?? [];
+
+    // The thread reports its own adds and removals; the card owns the total the counts row
+    // shows. A deleted parent takes its replies with it, so `delta` is not always ±1.
+    const shiftCommentCount = useCallback(
+        (delta) =>
+            patchPost({ comments_count: Math.max(0, post.comments_count + delta) }),
+        [patchPost, post.comments_count]
+    );
 
     const handleDelete = async () => {
         if (!window.confirm("Delete this post? This cannot be undone.")) return;
@@ -325,7 +335,13 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
                 </div>
                 <div className="_feed_inner_timeline_total_reacts_txt">
                     <p className="_feed_inner_timeline_total_reacts_para1">
-                        <a href="#0">
+                        <a
+                            href="#0"
+                            onClick={(event) => {
+                                event.preventDefault();
+                                setShowComments((open) => !open);
+                            }}
+                        >
                             <span>{post.comments_count}</span> Comment
                         </a>
                     </p>
@@ -388,7 +404,11 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
                 </button>
                 <button
                     type="button"
-                    className="_feed_inner_timeline_reaction_comment _feed_reaction"
+                    onClick={() => setShowComments((open) => !open)}
+                    aria-expanded={showComments}
+                    className={`_feed_inner_timeline_reaction_comment _feed_reaction${
+                        showComments ? " _feed_reaction_active" : ""
+                    }`}
                 >
                     <span className="_feed_inner_timeline_reaction_link">
                         {" "}
@@ -442,6 +462,12 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
                     </span>
                 </button>
             </div>
+
+            {/* Mounted only once the thread is opened, so a feed of ten posts doesn't fetch
+                ten sets of comments nobody asked to read. */}
+            {showComments && (
+                <CommentList postId={post.id} onCountChanged={shiftCommentCount} />
+            )}
         </div>
     );
 }
