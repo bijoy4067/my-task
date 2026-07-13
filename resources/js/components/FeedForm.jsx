@@ -16,14 +16,42 @@ const EMPTY = {
 
 const MAX_IMAGES = 10;
 
-export default function App({ onCreated }) {
-    const [form, setForm] = useState(EMPTY);
+// An ISO datetime from the API ("2026-07-20T18:30:00+00:00") and a <input type="datetime-local">
+// value ("2026-07-20T18:30") agree on everything up to the seconds, and this app never
+// converts between timezones elsewhere — so a straight slice round-trips cleanly.
+const toDatetimeLocal = (iso) => (iso ? iso.slice(0, 16) : "");
+
+// `post` puts the composer in edit mode: prefilled from an existing post, submitting
+// updates it in place instead of creating a new one, and the type can no longer be changed.
+export default function App({ onCreated, post, onSaved }) {
+    const isEditing = Boolean(post);
+
+    const initialForm = isEditing
+        ? {
+              mode: post.type,
+              body: post.body || "",
+              title: post.title || "",
+              startsAt: toDatetimeLocal(post.event?.starts_at),
+              endsAt: toDatetimeLocal(post.event?.ends_at),
+              location: post.event?.location || "",
+              visibility: post.visibility,
+          }
+        : EMPTY;
+
+    const [form, setForm] = useState(initialForm);
     const [imageFiles, setImageFiles] = useState([]);
     const [videoFile, setVideoFile] = useState(null);
     const [previews, setPreviews] = useState([]);
     const [videoPreview, setVideoPreview] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+
+    // Media the post already had. Existing images are removed by id (they're never
+    // re-uploaded); the existing video is dropped wholesale since the collection holds one.
+    const [existingImages, setExistingImages] = useState(isEditing ? post.images ?? [] : []);
+    const [removedImageIds, setRemovedImageIds] = useState([]);
+    const [existingVideoUrl, setExistingVideoUrl] = useState(isEditing ? post.video_url : null);
+    const [videoRemoved, setVideoRemoved] = useState(false);
 
     const imageInput = useRef(null);
     const videoInput = useRef(null);
@@ -76,17 +104,19 @@ export default function App({ onCreated }) {
     };
 
     // Picking again adds to the selection rather than replacing it, so images can be
-    // gathered a few at a time. Images and video stay mutually exclusive.
+    // gathered a few at a time. Images and video stay mutually exclusive. Existing images
+    // (edit mode) count against the same cap since they all end up on the same post.
     const addImages = (event) => {
         const picked = Array.from(event.target.files ?? []);
         event.target.value = "";
         if (picked.length === 0) return;
 
         setImageFiles((current) => {
-            if (current.length + picked.length > MAX_IMAGES) {
+            const room = MAX_IMAGES - existingImages.length;
+            if (current.length + picked.length > room) {
                 setError(`You can attach up to ${MAX_IMAGES} images.`);
             }
-            return [...current, ...picked].slice(0, MAX_IMAGES);
+            return [...current, ...picked].slice(0, Math.max(room, 0));
         });
         setVideoFile(null);
     };
@@ -95,12 +125,26 @@ export default function App({ onCreated }) {
         setImageFiles((current) => current.filter((_, at) => at !== index));
     };
 
+    // Drops one of the post's already-uploaded images; the id is sent on save so the
+    // server deletes it too.
+    const removeExistingImage = (id) => {
+        setExistingImages((current) => current.filter((image) => image.id !== id));
+        setRemovedImageIds((current) => [...current, id]);
+    };
+
     const removeVideo = () => {
         setVideoFile(null);
         if (videoInput.current) videoInput.current.value = "";
     };
 
-    // The stored type falls out of the mode plus whatever is attached.
+    // Drops the post's already-uploaded video; flagged for the server to delete on save.
+    const removeExistingVideo = () => {
+        setExistingVideoUrl(null);
+        setVideoRemoved(true);
+    };
+
+    // The stored type falls out of the mode plus whatever is attached. Fixed once a post
+    // exists, since editing never changes what kind of post it is.
     const postType = () => {
         if (form.mode !== "status") return form.mode;
         if (imageFiles.length > 0) return "photo";
@@ -108,7 +152,11 @@ export default function App({ onCreated }) {
         return "status";
     };
 
-    const hasMedia = imageFiles.length > 0 || Boolean(videoFile);
+    const hasMedia =
+        imageFiles.length > 0 ||
+        Boolean(videoFile) ||
+        existingImages.length > 0 ||
+        Boolean(existingVideoUrl);
 
     const canSubmit = () => {
         if (submitting) return false;
@@ -124,7 +172,6 @@ export default function App({ onCreated }) {
         setError(null);
 
         const payload = new FormData();
-        payload.append("type", postType());
         payload.append("visibility", form.visibility);
         if (form.body) payload.append("body", form.body);
         if (form.title) payload.append("title", form.title);
@@ -134,16 +181,37 @@ export default function App({ onCreated }) {
         imageFiles.forEach((file) => payload.append("images[]", file));
         if (videoFile) payload.append("video", videoFile);
 
+        // Editing keeps the post's original type — it's never sent — and layers on the
+        // media removals plus the PUT spoof (PHP won't populate $_FILES on a real PUT body).
+        if (isEditing) {
+            removedImageIds.forEach((id) => payload.append("remove_images[]", id));
+            if (videoRemoved) payload.append("remove_video", "1");
+            payload.append("_method", "PUT");
+        } else {
+            payload.append("type", postType());
+        }
+
         try {
-            const response = await apiFetch("/api/posts", { method: "POST", body: payload });
+            const url = isEditing ? `/api/posts/${post.id}` : "/api/posts";
+            const response = await apiFetch(url, { method: "POST", body: payload });
 
             if (!response.ok) {
-                throw new Error(await parseErrorMessage(response, "Unable to publish the post."));
+                throw new Error(
+                    await parseErrorMessage(
+                        response,
+                        isEditing ? "Unable to save changes." : "Unable to publish the post."
+                    )
+                );
             }
 
             const { data } = await response.json();
-            onCreated?.(data);
-            reset();
+
+            if (isEditing) {
+                onSaved?.(data);
+            } else {
+                onCreated?.(data);
+                reset();
+            }
         } catch (exception) {
             setError(exception.message);
         } finally {
@@ -151,13 +219,14 @@ export default function App({ onCreated }) {
         }
     };
 
-    // Photo/Video light up when something is attached; Event/Article when that mode is on.
+    // Photo/Video light up when something is attached (new or already on the post);
+    // Event/Article when that mode is on.
     const isActive = (choice) => {
         const active =
             choice === "photo"
-                ? imageFiles.length > 0
+                ? imageFiles.length > 0 || existingImages.length > 0
                 : choice === "video"
-                  ? Boolean(videoFile)
+                  ? Boolean(videoFile) || Boolean(existingVideoUrl)
                   : form.mode === choice;
 
         return active ? " _feed_reaction_active" : "";
@@ -234,9 +303,66 @@ export default function App({ onCreated }) {
 
             {/*Selected photos. The story card's dark scrim and caption bar belong to a story,
                not to an upload preview, so a tile here is just the image plus a corner remove
-               control — and an add-more tile while there is room left.*/}
-            {previews.length > 0 && (
+               control — and an add-more tile while there is room left. Existing (already
+               uploaded) images and newly picked ones render side by side but remove through
+               different handlers, since only the new ones are actual File objects.*/}
+            {(existingImages.length > 0 || previews.length > 0) && (
                 <div className="row _mar_b16">
+                    {existingImages.map((image, index) => (
+                        <div
+                            key={`existing-${image.id}`}
+                            className="col-xl-3 col-lg-3 col-md-4 col-sm-4 col _mar_b16"
+                        >
+                            <div style={{ position: "relative" }}>
+                                <img
+                                    src={image.url}
+                                    alt={`Attached ${index + 1}`}
+                                    style={{
+                                        width: "100%",
+                                        aspectRatio: "1 / 1",
+                                        objectFit: "cover",
+                                        borderRadius: 6,
+                                        display: "block",
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeExistingImage(image.id)}
+                                    aria-label={`Remove image ${index + 1}`}
+                                    style={{
+                                        position: "absolute",
+                                        top: 6,
+                                        right: 6,
+                                        width: 24,
+                                        height: 24,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        borderRadius: "50%",
+                                        border: "none",
+                                        background: "rgba(17, 32, 50, 0.75)",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                    }}
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width={10}
+                                        height={10}
+                                        fill="none"
+                                        viewBox="0 0 10 10"
+                                    >
+                                        <path
+                                            stroke="#fff"
+                                            strokeLinecap="round"
+                                            d="M1 1l8 8M9 1L1 9"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+
                     {previews.map((url, index) => (
                         <div
                             key={url}
@@ -292,7 +418,7 @@ export default function App({ onCreated }) {
                         </div>
                     ))}
 
-                    {previews.length < MAX_IMAGES && (
+                    {existingImages.length + previews.length < MAX_IMAGES && (
                         <div className="col-xl-3 col-lg-3 col-md-4 col-sm-4 col _mar_b16">
                             <button
                                 type="button"
@@ -317,11 +443,12 @@ export default function App({ onCreated }) {
             )}
 
             {/*A raw <video> sizes itself to the file's intrinsic dimensions and blows out the
-               composer, so it is boxed to a fixed 16:9 frame and letterboxed inside it.*/}
-            {videoPreview && (
+               composer, so it is boxed to a fixed 16:9 frame and letterboxed inside it. A newly
+               picked file always wins over the existing video, since it's about to replace it.*/}
+            {(videoPreview || existingVideoUrl) && (
                 <div className="_mar_b16" style={{ position: "relative" }}>
                     <video
-                        src={videoPreview}
+                        src={videoPreview || existingVideoUrl}
                         controls
                         preload="metadata"
                         style={{
@@ -335,7 +462,7 @@ export default function App({ onCreated }) {
                     />
                     <button
                         type="button"
-                        onClick={removeVideo}
+                        onClick={videoPreview ? removeVideo : removeExistingVideo}
                         aria-label="Remove video"
                         style={{
                             position: "absolute",
@@ -478,56 +605,63 @@ export default function App({ onCreated }) {
                             Video
                         </button>
                     </div>
-                    <div className={`_feed_inner_text_area_bottom_event _feed_common${isActive("event")}`}>
-                        <button
-                            type="button"
-                            className="_feed_inner_text_area_bottom_photo_link"
-                            onClick={() => chooseType("event")}
-                        >
-                            {" "}
-                            <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
-                                {" "}
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width={22}
-                                    height={24}
-                                    fill="none"
-                                    viewBox="0 0 22 24"
+                    {/* A post's type is set for good at creation, so switching to Event or
+                       Article mid-edit isn't offered — only Photo/Video (attaching media)
+                       stay available above. */}
+                    {!isEditing && (
+                        <>
+                            <div className={`_feed_inner_text_area_bottom_event _feed_common${isActive("event")}`}>
+                                <button
+                                    type="button"
+                                    className="_feed_inner_text_area_bottom_photo_link"
+                                    onClick={() => chooseType("event")}
                                 >
-                                    <path
-                                        fill="#666"
-                                        d="M14.371 2c.32 0 .585.262.627.603l.005.095v.788c2.598.195 4.188 2.033 4.18 5v8.488c0 3.145-1.786 5.026-4.656 5.026H7.395C4.53 22 2.74 20.087 2.74 16.904V8.486c0-2.966 1.596-4.804 4.187-5v-.788c0-.386.283-.698.633-.698.32 0 .584.262.626.603l.006.095v.771h5.546v-.771c0-.386.284-.698.633-.698zm3.546 8.283H4.004l.001 6.621c0 2.325 1.137 3.616 3.183 3.697l.207.004h7.132c2.184 0 3.39-1.271 3.39-3.63v-6.692zm-3.202 5.853c.349 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.237-.645.546-.692l.094-.006zm-3.742 0c.35 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.238-.645.546-.692l.094-.006zm-3.75 0c.35 0 .633.312.633.698 0 .353-.238.645-.547.691l-.093.006c-.35 0-.633-.312-.633-.697 0-.354.238-.645.547-.692l.094-.006zm7.492-3.615c.349 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.237-.645.546-.691l.094-.006zm-3.742 0c.35 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.238-.645.546-.691l.094-.006zm-3.75 0c.35 0 .633.312.633.697 0 .354-.238.645-.547.692l-.093.006c-.35 0-.633-.312-.633-.698 0-.353.238-.645.547-.691l.094-.006zm6.515-7.657H8.192v.895c0 .385-.283.698-.633.698-.32 0-.584-.263-.626-.603l-.006-.095v-.874c-1.886.173-2.922 1.422-2.922 3.6v.402h13.912v-.403c.007-2.181-1.024-3.427-2.914-3.599v.874c0 .385-.283.698-.632.698-.32 0-.585-.263-.627-.603l-.005-.095v-.895z"
-                                    />
-                                </svg>
-                            </span>
-                            Event
-                        </button>
-                    </div>
-                    <div className={`_feed_inner_text_area_bottom_article _feed_common${isActive("article")}`}>
-                        <button
-                            type="button"
-                            className="_feed_inner_text_area_bottom_photo_link"
-                            onClick={() => chooseType("article")}
-                        >
-                            {" "}
-                            <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
-                                {" "}
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width={18}
-                                    height={20}
-                                    fill="none"
-                                    viewBox="0 0 18 20"
+                                    {" "}
+                                    <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
+                                        {" "}
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width={22}
+                                            height={24}
+                                            fill="none"
+                                            viewBox="0 0 22 24"
+                                        >
+                                            <path
+                                                fill="#666"
+                                                d="M14.371 2c.32 0 .585.262.627.603l.005.095v.788c2.598.195 4.188 2.033 4.18 5v8.488c0 3.145-1.786 5.026-4.656 5.026H7.395C4.53 22 2.74 20.087 2.74 16.904V8.486c0-2.966 1.596-4.804 4.187-5v-.788c0-.386.283-.698.633-.698.32 0 .584.262.626.603l.006.095v.771h5.546v-.771c0-.386.284-.698.633-.698zm3.546 8.283H4.004l.001 6.621c0 2.325 1.137 3.616 3.183 3.697l.207.004h7.132c2.184 0 3.39-1.271 3.39-3.63v-6.692zm-3.202 5.853c.349 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.237-.645.546-.692l.094-.006zm-3.742 0c.35 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.238-.645.546-.692l.094-.006zm-3.75 0c.35 0 .633.312.633.698 0 .353-.238.645-.547.691l-.093.006c-.35 0-.633-.312-.633-.697 0-.354.238-.645.547-.692l.094-.006zm7.492-3.615c.349 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.237-.645.546-.691l.094-.006zm-3.742 0c.35 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.238-.645.546-.691l.094-.006zm-3.75 0c.35 0 .633.312.633.697 0 .354-.238.645-.547.692l-.093.006c-.35 0-.633-.312-.633-.698 0-.353.238-.645.547-.691l.094-.006zm6.515-7.657H8.192v.895c0 .385-.283.698-.633.698-.32 0-.584-.263-.626-.603l-.006-.095v-.874c-1.886.173-2.922 1.422-2.922 3.6v.402h13.912v-.403c.007-2.181-1.024-3.427-2.914-3.599v.874c0 .385-.283.698-.632.698-.32 0-.585-.263-.627-.603l-.005-.095v-.895z"
+                                            />
+                                        </svg>
+                                    </span>
+                                    Event
+                                </button>
+                            </div>
+                            <div className={`_feed_inner_text_area_bottom_article _feed_common${isActive("article")}`}>
+                                <button
+                                    type="button"
+                                    className="_feed_inner_text_area_bottom_photo_link"
+                                    onClick={() => chooseType("article")}
                                 >
-                                    <path
-                                        fill="#666"
-                                        d="M12.49 0c2.92 0 4.665 1.92 4.693 5.132v9.659c0 3.257-1.75 5.209-4.693 5.209H5.434c-.377 0-.734-.032-1.07-.095l-.2-.041C2 19.371.74 17.555.74 14.791V5.209c0-.334.019-.654.055-.96C1.114 1.564 2.799 0 5.434 0h7.056zm-.008 1.457H5.434c-2.244 0-3.381 1.263-3.381 3.752v9.582c0 2.489 1.137 3.752 3.38 3.752h7.049c2.242 0 3.372-1.263 3.372-3.752V5.209c0-2.489-1.13-3.752-3.372-3.752zm-.239 12.053c.36 0 .652.324.652.724 0 .4-.292.724-.652.724H5.656c-.36 0-.652-.324-.652-.724 0-.4.293-.724.652-.724h6.587zm0-4.239a.643.643 0 01.632.339.806.806 0 010 .78.643.643 0 01-.632.339H5.656c-.334-.042-.587-.355-.587-.729s.253-.688.587-.729h6.587zM8.17 5.042c.335.041.588.355.588.729 0 .373-.253.687-.588.728H5.665c-.336-.041-.589-.355-.589-.728 0-.374.253-.688.589-.729H8.17z"
-                                    />
-                                </svg>
-                            </span>
-                            Article
-                        </button>
-                    </div>
+                                    {" "}
+                                    <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
+                                        {" "}
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width={18}
+                                            height={20}
+                                            fill="none"
+                                            viewBox="0 0 18 20"
+                                        >
+                                            <path
+                                                fill="#666"
+                                                d="M12.49 0c2.92 0 4.665 1.92 4.693 5.132v9.659c0 3.257-1.75 5.209-4.693 5.209H5.434c-.377 0-.734-.032-1.07-.095l-.2-.041C2 19.371.74 17.555.74 14.791V5.209c0-.334.019-.654.055-.96C1.114 1.564 2.799 0 5.434 0h7.056zm-.008 1.457H5.434c-2.244 0-3.381 1.263-3.381 3.752v9.582c0 2.489 1.137 3.752 3.38 3.752h7.049c2.242 0 3.372-1.263 3.372-3.752V5.209c0-2.489-1.13-3.752-3.372-3.752zm-.239 12.053c.36 0 .652.324.652.724 0 .4-.292.724-.652.724H5.656c-.36 0-.652-.324-.652-.724 0-.4.293-.724.652-.724h6.587zm0-4.239a.643.643 0 01.632.339.806.806 0 010 .78.643.643 0 01-.632.339H5.656c-.334-.042-.587-.355-.587-.729s.253-.688.587-.729h6.587zM8.17 5.042c.335.041.588.355.588.729 0 .373-.253.687-.588.728H5.665c-.336-.041-.589-.355-.589-.728 0-.374.253-.688.589-.729H8.17z"
+                                            />
+                                        </svg>
+                                    </span>
+                                    Article
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
                 <div
                     className="_feed_inner_text_area_btn"
@@ -564,7 +698,9 @@ export default function App({ onCreated }) {
                                 clipRule="evenodd"
                             />
                         </svg>{" "}
-                        <span>{submitting ? "Posting..." : "Post"}</span>
+                        <span>
+                            {submitting ? (isEditing ? "Saving..." : "Posting...") : isEditing ? "Save" : "Post"}
+                        </span>
                     </button>
                 </div>
             </div>
@@ -619,50 +755,54 @@ export default function App({ onCreated }) {
                                 </span>
                             </button>
                         </div>
-                        <div className={`_feed_inner_text_area_bottom_event _feed_common${isActive("event")}`}>
-                            <button
-                                type="button"
-                                className="_feed_inner_text_area_bottom_photo_link"
-                                onClick={() => chooseType("event")}
-                            >
-                                <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width={22}
-                                        height={24}
-                                        fill="none"
-                                        viewBox="0 0 22 24"
+                        {!isEditing && (
+                            <>
+                                <div className={`_feed_inner_text_area_bottom_event _feed_common${isActive("event")}`}>
+                                    <button
+                                        type="button"
+                                        className="_feed_inner_text_area_bottom_photo_link"
+                                        onClick={() => chooseType("event")}
                                     >
-                                        <path
-                                            fill="#666"
-                                            d="M14.371 2c.32 0 .585.262.627.603l.005.095v.788c2.598.195 4.188 2.033 4.18 5v8.488c0 3.145-1.786 5.026-4.656 5.026H7.395C4.53 22 2.74 20.087 2.74 16.904V8.486c0-2.966 1.596-4.804 4.187-5v-.788c0-.386.283-.698.633-.698.32 0 .584.262.626.603l.006.095v.771h5.546v-.771c0-.386.284-.698.633-.698zm3.546 8.283H4.004l.001 6.621c0 2.325 1.137 3.616 3.183 3.697l.207.004h7.132c2.184 0 3.39-1.271 3.39-3.63v-6.692zm-3.202 5.853c.349 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.237-.645.546-.692l.094-.006zm-3.742 0c.35 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.238-.645.546-.692l.094-.006zm-3.75 0c.35 0 .633.312.633.698 0 .353-.238.645-.547.691l-.093.006c-.35 0-.633-.312-.633-.697 0-.354.238-.645.547-.692l.094-.006zm7.492-3.615c.349 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.237-.645.546-.691l.094-.006zm-3.742 0c.35 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.238-.645.546-.691l.094-.006zm-3.75 0c.35 0 .633.312.633.697 0 .354-.238.645-.547.692l-.093.006c-.35 0-.633-.312-.633-.698 0-.353.238-.645.547-.691l.094-.006zm6.515-7.657H8.192v.895c0 .385-.283.698-.633.698-.32 0-.584-.263-.626-.603l-.006-.095v-.874c-1.886.173-2.922 1.422-2.922 3.6v.402h13.912v-.403c.007-2.181-1.024-3.427-2.914-3.599v.874c0 .385-.283.698-.632.698-.32 0-.585-.263-.627-.603l-.005-.095v-.895z"
-                                        />
-                                    </svg>
-                                </span>
-                            </button>
-                        </div>
-                        <div className={`_feed_inner_text_area_bottom_article _feed_common${isActive("article")}`}>
-                            <button
-                                type="button"
-                                className="_feed_inner_text_area_bottom_photo_link"
-                                onClick={() => chooseType("article")}
-                            >
-                                <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width={18}
-                                        height={20}
-                                        fill="none"
-                                        viewBox="0 0 18 20"
+                                        <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width={22}
+                                                height={24}
+                                                fill="none"
+                                                viewBox="0 0 22 24"
+                                            >
+                                                <path
+                                                    fill="#666"
+                                                    d="M14.371 2c.32 0 .585.262.627.603l.005.095v.788c2.598.195 4.188 2.033 4.18 5v8.488c0 3.145-1.786 5.026-4.656 5.026H7.395C4.53 22 2.74 20.087 2.74 16.904V8.486c0-2.966 1.596-4.804 4.187-5v-.788c0-.386.283-.698.633-.698.32 0 .584.262.626.603l.006.095v.771h5.546v-.771c0-.386.284-.698.633-.698zm3.546 8.283H4.004l.001 6.621c0 2.325 1.137 3.616 3.183 3.697l.207.004h7.132c2.184 0 3.39-1.271 3.39-3.63v-6.692zm-3.202 5.853c.349 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.237-.645.546-.692l.094-.006zm-3.742 0c.35 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.238-.645.546-.692l.094-.006zm-3.75 0c.35 0 .633.312.633.698 0 .353-.238.645-.547.691l-.093.006c-.35 0-.633-.312-.633-.697 0-.354.238-.645.547-.692l.094-.006zm7.492-3.615c.349 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.237-.645.546-.691l.094-.006zm-3.742 0c.35 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.238-.645.546-.691l.094-.006zm-3.75 0c.35 0 .633.312.633.697 0 .354-.238.645-.547.692l-.093.006c-.35 0-.633-.312-.633-.698 0-.353.238-.645.547-.691l.094-.006zm6.515-7.657H8.192v.895c0 .385-.283.698-.633.698-.32 0-.584-.263-.626-.603l-.006-.095v-.874c-1.886.173-2.922 1.422-2.922 3.6v.402h13.912v-.403c.007-2.181-1.024-3.427-2.914-3.599v.874c0 .385-.283.698-.632.698-.32 0-.585-.263-.627-.603l-.005-.095v-.895z"
+                                                />
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div className={`_feed_inner_text_area_bottom_article _feed_common${isActive("article")}`}>
+                                    <button
+                                        type="button"
+                                        className="_feed_inner_text_area_bottom_photo_link"
+                                        onClick={() => chooseType("article")}
                                     >
-                                        <path
-                                            fill="#666"
-                                            d="M12.49 0c2.92 0 4.665 1.92 4.693 5.132v9.659c0 3.257-1.75 5.209-4.693 5.209H5.434c-.377 0-.734-.032-1.07-.095l-.2-.041C2 19.371.74 17.555.74 14.791V5.209c0-.334.019-.654.055-.96C1.114 1.564 2.799 0 5.434 0h7.056zm-.008 1.457H5.434c-2.244 0-3.381 1.263-3.381 3.752v9.582c0 2.489 1.137 3.752 3.38 3.752h7.049c2.242 0 3.372-1.263 3.372-3.752V5.209c0-2.489-1.13-3.752-3.372-3.752zm-.239 12.053c.36 0 .652.324.652.724 0 .4-.292.724-.652.724H5.656c-.36 0-.652-.324-.652-.724 0-.4.293-.724.652-.724h6.587zm0-4.239a.643.643 0 01.632.339.806.806 0 010 .78.643.643 0 01-.632.339H5.656c-.334-.042-.587-.355-.587-.729s.253-.688.587-.729h6.587zM8.17 5.042c.335.041.588.355.588.729 0 .373-.253.687-.588.728H5.665c-.336-.041-.589-.355-.589-.728 0-.374.253-.688.589-.729H8.17z"
-                                        />
-                                    </svg>
-                                </span>
-                            </button>
-                        </div>
+                                        <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width={18}
+                                                height={20}
+                                                fill="none"
+                                                viewBox="0 0 18 20"
+                                            >
+                                                <path
+                                                    fill="#666"
+                                                    d="M12.49 0c2.92 0 4.665 1.92 4.693 5.132v9.659c0 3.257-1.75 5.209-4.693 5.209H5.434c-.377 0-.734-.032-1.07-.095l-.2-.041C2 19.371.74 17.555.74 14.791V5.209c0-.334.019-.654.055-.96C1.114 1.564 2.799 0 5.434 0h7.056zm-.008 1.457H5.434c-2.244 0-3.381 1.263-3.381 3.752v9.582c0 2.489 1.137 3.752 3.38 3.752h7.049c2.242 0 3.372-1.263 3.372-3.752V5.209c0-2.489-1.13-3.752-3.372-3.752zm-.239 12.053c.36 0 .652.324.652.724 0 .4-.292.724-.652.724H5.656c-.36 0-.652-.324-.652-.724 0-.4.293-.724.652-.724h6.587zm0-4.239a.643.643 0 01.632.339.806.806 0 010 .78.643.643 0 01-.632.339H5.656c-.334-.042-.587-.355-.587-.729s.253-.688.587-.729h6.587zM8.17 5.042c.335.041.588.355.588.729 0 .373-.253.687-.588.728H5.665c-.336-.041-.589-.355-.589-.728 0-.374.253-.688.589-.729H8.17z"
+                                                />
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div
                         className="_feed_inner_text_area_btn"
@@ -699,7 +839,9 @@ export default function App({ onCreated }) {
                                     clipRule="evenodd"
                                 />
                             </svg>{" "}
-                            <span>{submitting ? "Posting..." : "Post"}</span>
+                            <span>
+                            {submitting ? (isEditing ? "Saving..." : "Posting...") : isEditing ? "Save" : "Post"}
+                        </span>
                         </button>
                     </div>
                 </div>

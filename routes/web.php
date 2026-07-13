@@ -15,6 +15,10 @@ Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');
 Route::middleware('auth')->group(function () {
     Route::get('/api/feed', [FeedController::class, 'index']);
     Route::post('/api/posts', [PostController::class, 'store'])->middleware('throttle:30,1');
+    Route::get('/api/posts/{post}', [PostController::class, 'show']);
+    // PUT can't carry $_FILES on its own — the client spoofs it with a POST body
+    // that sets _method=PUT, and Laravel's MethodOverride middleware routes it here.
+    Route::put('/api/posts/{post}', [PostController::class, 'update'])->middleware('throttle:30,1');
     Route::delete('/api/posts/{post}', [PostController::class, 'destroy']);
     Route::get('/api/media/{media}', [MediaController::class, 'show'])->name('media.show');
 });

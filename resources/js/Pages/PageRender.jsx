@@ -3,6 +3,7 @@ import { AuthProvider } from '../services/AuthServiceProvider';
 import Login from './Login/Index';
 import Register from './Register/Index';
 import Feed from './Feed/Index';
+import FeedEdit from './Feed/Edit';
 import VerifyAuth from './VerifyAuth';
 
 export default function Root() {
@@ -16,6 +17,14 @@ export default function Root() {
 					element={
 						<VerifyAuth>
 							<Feed />
+						</VerifyAuth>
+					}
+				/>
+				<Route
+					path="/posts/:id/edit"
+					element={
+						<VerifyAuth>
+							<FeedEdit />
 						</VerifyAuth>
 					}
 				/>

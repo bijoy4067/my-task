@@ -9,6 +9,7 @@ export default function App() {
     // Each dropdown owns its open state and closes on an outside click or Escape.
     const notify = useDropdown();
     const profile = useDropdown();
+    const message = useDropdown();
 
     const handleLogout = async (event) => {
         event.preventDefault();
@@ -42,7 +43,10 @@ export default function App() {
                         {" "}
                         <span className="navbar-toggler-icon" />
                     </button>
-                    <div className="collapse navbar-collapse" id="navbarSupportedContent">
+                    <div
+                        className="collapse navbar-collapse"
+                        id="navbarSupportedContent"
+                    >
                         <div className="_header_form ms-auto">
                             <form className="_header_form_grp">
                                 <svg
@@ -54,7 +58,11 @@ export default function App() {
                                     viewBox="0 0 17 17"
                                 >
                                     <circle cx={7} cy={7} r={6} stroke="#666" />
-                                    <path stroke="#666" strokeLinecap="round" d="M16 16l-3-3" />
+                                    <path
+                                        stroke="#666"
+                                        strokeLinecap="round"
+                                        d="M16 16l-3-3"
+                                    />
                                 </svg>
                                 <input
                                     className="form-control me-2 _inpt1"
@@ -120,7 +128,10 @@ export default function App() {
                                     </svg>
                                 </a>
                             </li>
-                            <li className="nav-item _header_nav_item" ref={notify.ref}>
+                            <li
+                                className="nav-item _header_nav_item"
+                                ref={notify.ref}
+                            >
                                 <span
                                     id="_notify_btn"
                                     className="nav-link _header_nav_link _header_notify_btn"
@@ -142,7 +153,10 @@ export default function App() {
                                         />
                                     </svg>
                                     <span className="_counting">6</span>
-                                    <div id="_notify_drop" className={`_notification_dropdown${notify.open ? ' show' : ''}`}>
+                                    <div
+                                        id="_notify_drop"
+                                        className={`_notification_dropdown${notify.open ? " show" : ""}`}
+                                    >
                                         <div className="_notifications_content">
                                             <h4 className="_notifications_content_title">
                                                 Notifications
@@ -159,9 +173,24 @@ export default function App() {
                                                         fill="none"
                                                         viewBox="0 0 4 17"
                                                     >
-                                                        <circle cx={2} cy={2} r={2} fill="#C4C4C4" />
-                                                        <circle cx={2} cy={8} r={2} fill="#C4C4C4" />
-                                                        <circle cx={2} cy={15} r={2} fill="#C4C4C4" />
+                                                        <circle
+                                                            cx={2}
+                                                            cy={2}
+                                                            r={2}
+                                                            fill="#C4C4C4"
+                                                        />
+                                                        <circle
+                                                            cx={2}
+                                                            cy={8}
+                                                            r={2}
+                                                            fill="#C4C4C4"
+                                                        />
+                                                        <circle
+                                                            cx={2}
+                                                            cy={15}
+                                                            r={2}
+                                                            fill="#C4C4C4"
+                                                        />
                                                     </svg>
                                                 </button>
                                                 <div className="_notifications_drop_right">
@@ -173,12 +202,14 @@ export default function App() {
                                                         </li>
                                                         <li className="_notification_item">
                                                             <span className="_notification_link">
-                                                                Notifivations seetings
+                                                                Notifivations
+                                                                seetings
                                                             </span>
                                                         </li>
                                                         <li className="_notification_item">
                                                             <span className="_notification_link">
-                                                                Open Notifications
+                                                                Open
+                                                                Notifications
                                                             </span>
                                                         </li>
                                                     </ul>
@@ -187,7 +218,9 @@ export default function App() {
                                         </div>
                                         <div className="_notifications_drop_box">
                                             <div className="_notifications_drop_btn_grp">
-                                                <button className="_notifications_btn_link">All</button>
+                                                <button className="_notifications_btn_link">
+                                                    All
+                                                </button>
                                                 <button className="_notifications_btn_link1">
                                                     Unread
                                                 </button>
@@ -206,10 +239,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -223,7 +259,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -233,7 +270,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -250,10 +289,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -267,7 +309,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -277,7 +320,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -294,10 +339,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -311,7 +359,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -321,7 +370,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -338,10 +389,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -355,7 +409,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -365,7 +420,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -382,10 +439,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -399,7 +459,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -409,7 +470,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -426,10 +489,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -443,7 +509,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -453,7 +520,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -470,10 +539,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -487,7 +559,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -497,7 +570,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -514,10 +589,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -531,7 +609,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -541,7 +620,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -558,10 +639,13 @@ export default function App() {
                                                             <span className="_notify_txt_link">
                                                                 Steve Jobs
                                                             </span>
-                                                            posted a link in your timeline.
+                                                            posted a link in
+                                                            your timeline.
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -575,7 +659,8 @@ export default function App() {
                                                     </div>
                                                     <div className="_notification_txt">
                                                         <p className="_notification_para">
-                                                            An admin changed the name of the group
+                                                            An admin changed the
+                                                            name of the group
                                                             <span className="_notify_txt_link">
                                                                 Freelacer usa
                                                             </span>
@@ -585,7 +670,9 @@ export default function App() {
                                                             </span>
                                                         </p>
                                                         <div className="_nitification_time">
-                                                            <span>42 miniutes ago</span>
+                                                            <span>
+                                                                42 miniutes ago
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -594,11 +681,14 @@ export default function App() {
                                     </div>
                                 </span>
                             </li>
-                            <li className="nav-item _header_nav_item">
-                                <a
-                                    className="nav-link _header_nav_link"
-                                    aria-current="page"
-                                    href="chat.html"
+                            <li
+                                className="nav-item _header_nav_item"
+                                ref={message.ref}
+                            >
+                                <span
+                                    id="_notify_btn"
+                                    className="nav-link _header_nav_link _header_notify_btn"
+                                    onClick={notify.toggle}
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -616,7 +706,7 @@ export default function App() {
                                         />
                                     </svg>{" "}
                                     <span className="_counting">2</span>
-                                </a>
+                                </span>
                             </li>
                         </ul>
                         <div className="_header_nav_profile" ref={profile.ref}>
@@ -628,7 +718,9 @@ export default function App() {
                                 />
                             </div>
                             <div className="_header_nav_dropdown">
-                                <p className="_header_nav_para">{user?.name ?? 'Dylan Field'}</p>
+                                <p className="_header_nav_para">
+                                    {user?.name ?? "Dylan Field"}
+                                </p>
                                 <button
                                     id="_profile_drop_show_btn"
                                     className="_header_nav_dropdown_btn _dropdown_toggle"
@@ -654,7 +746,7 @@ export default function App() {
                             <div
                                 id="_prfoile_drop"
                                 className={`_nav_profile_dropdown _profile_dropdown${
-                                    profile.open ? ' show' : ''
+                                    profile.open ? " show" : ""
                                 }`}
                             >
                                 <div className="_nav_profile_dropdown_info">
@@ -666,8 +758,13 @@ export default function App() {
                                         />
                                     </div>
                                     <div className="_nav_profile_dropdown_info_txt">
-                                        <h4 className="_nav_dropdown_title">{user?.name ?? 'Dylan Field'}</h4>
-                                        <a href="profile.html" className="_nav_drop_profile">
+                                        <h4 className="_nav_dropdown_title">
+                                            {user?.name ?? "Dylan Field"}
+                                        </h4>
+                                        <a
+                                            href="profile.html"
+                                            className="_nav_drop_profile"
+                                        >
                                             View Profile
                                         </a>
                                     </div>
@@ -675,7 +772,10 @@ export default function App() {
                                 <hr />
                                 <ul className="_nav_dropdown_list">
                                     <li className="_nav_dropdown_list_item">
-                                        <a href="#0" className="_nav_dropdown_link">
+                                        <a
+                                            href="#0"
+                                            className="_nav_dropdown_link"
+                                        >
                                             <div className="_nav_drop_info">
                                                 <span>
                                                     <svg
@@ -693,7 +793,10 @@ export default function App() {
                                                 </span>
                                                 Settings
                                             </div>
-                                            <button type="submit" className="_nav_drop_btn_link">
+                                            <button
+                                                type="submit"
+                                                className="_nav_drop_btn_link"
+                                            >
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     width={6}
@@ -711,7 +814,10 @@ export default function App() {
                                         </a>
                                     </li>
                                     <li className="_nav_dropdown_list_item">
-                                        <a href="#0" className="_nav_dropdown_link">
+                                        <a
+                                            href="#0"
+                                            className="_nav_dropdown_link"
+                                        >
                                             <div className="_nav_drop_info">
                                                 <span>
                                                     <svg
@@ -739,7 +845,10 @@ export default function App() {
                                                 </span>
                                                 Help &amp; Support
                                             </div>
-                                            <button type="submit" className="_nav_drop_btn_link">
+                                            <button
+                                                type="submit"
+                                                className="_nav_drop_btn_link"
+                                            >
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     width={6}
@@ -757,7 +866,10 @@ export default function App() {
                                         </a>
                                     </li>
                                     <li className="_nav_dropdown_list_item">
-                                        <a href="#0" className="_nav_dropdown_link" onClick={handleLogout}>
+                                        <a
+                                            href="#0"
+                                            className="_nav_dropdown_link"
+                                        >
                                             <div className="_nav_drop_info">
                                                 <span>
                                                     <svg
@@ -778,7 +890,10 @@ export default function App() {
                                                 </span>
                                                 Log Out
                                             </div>
-                                            <button type="submit" className="_nav_drop_btn_link">
+                                            <button
+                                                type="submit"
+                                                className="_nav_drop_btn_link"
+                                            >
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     width={6}
@@ -811,7 +926,10 @@ export default function App() {
                                 <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                     <div className="_header_mobile_menu_top_inner">
                                         <div className="_header_mobile_menu_logo">
-                                            <a href="feed.html" clas="_mobile_logo_link">
+                                            <a
+                                                href="feed.html"
+                                                clas="_mobile_logo_link"
+                                            >
                                                 <img
                                                     src="assets/images/logo.svg"
                                                     alt="Image"
@@ -821,7 +939,10 @@ export default function App() {
                                         </div>
                                         <div className="_header_mobile_menu_right">
                                             <form className="_header_form_grp">
-                                                <a href="#0" className="_header_mobile_search">
+                                                <a
+                                                    href="#0"
+                                                    className="_header_mobile_search"
+                                                >
                                                     <svg
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         width={17}
@@ -829,7 +950,12 @@ export default function App() {
                                                         fill="none"
                                                         viewBox="0 0 17 17"
                                                     >
-                                                        <circle cx={7} cy={7} r={6} stroke="#666" />
+                                                        <circle
+                                                            cx={7}
+                                                            cy={7}
+                                                            r={6}
+                                                            stroke="#666"
+                                                        />
                                                         <path
                                                             stroke="#666"
                                                             strokeLinecap="round"
@@ -918,7 +1044,10 @@ export default function App() {
                                         </a>
                                     </li>
                                     <li className="_mobile_navigation_bottom_item">
-                                        <a href="no" className="_mobile_navigation_bottom_link">
+                                        <a
+                                            href="no"
+                                            className="_mobile_navigation_bottom_link"
+                                        >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 width={25}
@@ -1003,5 +1132,5 @@ export default function App() {
             </div>
             {/* Mobile Bottom Navigation End */}
         </div>
-    )
+    );
 }

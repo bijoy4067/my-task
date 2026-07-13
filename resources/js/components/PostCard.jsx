@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch, parseErrorMessage } from "../utils/ApiFetcher";
 import { formatTimeAgo } from "../utils/formatTimeAgo";
 import { useDropdown } from "../hooks/useDropdown";
@@ -7,6 +8,7 @@ import PostEvent from "./PostEvent";
 import PostGallery from "./PostGallery";
 
 export default function PostCard({ post, onDeleted, onHidden }) {
+    const navigate = useNavigate();
     const menu = useDropdown();
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState(null);
@@ -86,6 +88,42 @@ export default function PostCard({ post, onDeleted, onHidden }) {
                             }`}
                         >
                                 <ul className="_feed_timeline_dropdown_list">
+                                    {/* Only the post's own author can edit it — this mirrors
+                                       the `delete` gate below and the same server-side check
+                                       runs again on save, so hiding it here is a UX nicety,
+                                       not the real access control. */}
+                                    {post.permissions.update && (
+                                        <li className="_feed_timeline_dropdown_item">
+                                            <a
+                                                href="#0"
+                                                className="_feed_timeline_dropdown_link"
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    menu.close();
+                                                    navigate(`/posts/${post.id}/edit`);
+                                                }}
+                                            >
+                                                <span>
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width={18}
+                                                        height={18}
+                                                        fill="none"
+                                                        viewBox="0 0 18 18"
+                                                    >
+                                                        <path
+                                                            stroke="#1890FF"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="1.2"
+                                                            d="M11.25 3.75l3 3M2.25 15.75l1.084-3.935a1.5 1.5 0 01.386-.683l8.892-8.892a1.5 1.5 0 012.122 0l1.976 1.976a1.5 1.5 0 010 2.122l-8.892 8.892a1.5 1.5 0 01-.683.386L2.25 15.75z"
+                                                        />
+                                                    </svg>
+                                                </span>
+                                                Edit
+                                            </a>
+                                        </li>
+                                    )}
                                     <li className="_feed_timeline_dropdown_item">
                                         <a
                                             href="#0"
