@@ -16,6 +16,7 @@ export default function App() {
         loadMore,
         prependPost,
         removePost,
+        updatePost,
     } = useFeed({
         onUnauthorized,
     });
@@ -330,6 +331,8 @@ export default function App() {
                             a reload — and it persists across one because it is already stored. */}
                     <FeedForm onCreated={prependPost} />
 
+                    {/* Likes and comments patch their post in place through `updatePost`,
+                        so the counts move without refetching the page. */}
                     <PostList
                         posts={posts}
                         loading={loading}
@@ -337,6 +340,7 @@ export default function App() {
                         hasMore={hasMore}
                         loadMore={loadMore}
                         onDeleted={removePost}
+                        onUpdated={updatePost}
                     />
                 </div>
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import PostCard from "./PostCard";
 
-export default function PostList({ posts, loading, error, hasMore, loadMore, onDeleted }) {
+export default function PostList({ posts, loading, error, hasMore, loadMore, onDeleted, onUpdated }) {
     const sentinel = useRef(null);
 
     // Fetch the next page when the sentinel below the last card scrolls into view.
@@ -30,6 +30,7 @@ export default function PostList({ posts, loading, error, hasMore, loadMore, onD
                     post={post}
                     onDeleted={onDeleted}
                     onHidden={onDeleted}
+                    onUpdated={onUpdated}
                 />
             ))}
 

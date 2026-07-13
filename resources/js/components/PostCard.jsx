@@ -1,17 +1,36 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, parseErrorMessage } from "../utils/ApiFetcher";
 import { formatTimeAgo } from "../utils/formatTimeAgo";
 import { useDropdown } from "../hooks/useDropdown";
+import { useLikeToggle } from "../hooks/useLikeToggle";
+import LikersModal from "./LikersModal";
 import PostBody from "./PostBody";
 import PostEvent from "./PostEvent";
 import PostGallery from "./PostGallery";
 
-export default function PostCard({ post, onDeleted, onHidden }) {
+export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
     const navigate = useNavigate();
     const menu = useDropdown();
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState(null);
+    const [showLikers, setShowLikers] = useState(false);
+
+    // The card doesn't own the post — the feed does. Patches go back up to useFeed, which
+    // re-renders this card with the new counts. No local copy to drift out of sync.
+    const patchPost = useCallback(
+        (patch) => onUpdated?.(post.id, patch),
+        [onUpdated, post.id]
+    );
+
+    const like = useLikeToggle({
+        liked: post.liked_by_me,
+        count: post.likes_count,
+        endpoint: `/api/posts/${post.id}/like`,
+        onChange: patchPost,
+    });
+
+    const likers = post.likers_preview ?? [];
 
     const handleDelete = async () => {
         if (!window.confirm("Delete this post? This cannot be undone.")) return;
@@ -265,18 +284,43 @@ export default function PostCard({ post, onDeleted, onHidden }) {
                 )}
             </div>
 
-            {/* The count badge is styled to overlap a row of reactor avatars (margin-left: -16px),
-                so on its own with no likers it floated as an orphan circle. It only appears once
-                there is something to count; the avatar row lands with the likes pass. */}
+            {/* The reactor avatars, then the count badge — which is styled to overlap them
+                (margin-left: -16px), so it only renders once there are faces to sit on. The
+                whole row opens the modal listing everyone who liked the post. */}
             <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26">
                 <div className="_feed_inner_timeline_total_reacts_image">
                     {post.likes_count > 0 && (
-                        <p
-                            className="_feed_inner_timeline_total_reacts_para"
-                            style={{ marginLeft: 0 }}
+                        <button
+                            type="button"
+                            onClick={() => setShowLikers(true)}
+                            aria-label={`See who reacted to this post (${post.likes_count})`}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                background: "none",
+                                border: 0,
+                                padding: 0,
+                            }}
                         >
-                            {post.likes_count}
-                        </p>
+                            {/* The template gives the leading avatar its own class and hides
+                                everything past the second on mobile, where the row won't fit. */}
+                            {likers.map((liker, index) => (
+                                <img
+                                    key={liker.id}
+                                    src={liker.avatar_url || "assets/images/react_img1.png"}
+                                    alt={liker.name}
+                                    title={liker.name}
+                                    className={
+                                        index === 0
+                                            ? "_react_img1"
+                                            : `_react_img${index >= 2 ? " _rect_img_mbl_none" : ""}`
+                                    }
+                                />
+                            ))}
+                            <p className="_feed_inner_timeline_total_reacts_para">
+                                {post.likes_count}
+                            </p>
+                        </button>
                     )}
                 </div>
                 <div className="_feed_inner_timeline_total_reacts_txt">
@@ -288,11 +332,25 @@ export default function PostCard({ post, onDeleted, onHidden }) {
                 </div>
             </div>
 
-            {/* Reaction bar. `liked_by_me` already drives the active state; the handlers
-                land with the like/comment/share pass. */}
+            {showLikers && (
+                <LikersModal postId={post.id} onClose={() => setShowLikers(false)} />
+            )}
+
+            {like.error && (
+                <p
+                    className="_feed_inner_timeline_post_box_para _padd_r24 _padd_l24"
+                    role="alert"
+                >
+                    {like.error}
+                </p>
+            )}
+
+            {/* Reaction bar. Share stays inert for now — it has no backend behind it yet. */}
             <div className="_feed_inner_timeline_reaction">
                 <button
                     type="button"
+                    onClick={like.toggle}
+                    aria-pressed={post.liked_by_me}
                     className={`_feed_inner_timeline_reaction_emoji _feed_reaction${
                         post.liked_by_me ? " _feed_reaction_active" : ""
                     }`}
