@@ -1,8 +1,21 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../services/AuthServiceProvider';
+import { useDropdown } from '../hooks/useDropdown';
 
 export default function App() {
-    const [notifyOpen, setNotifyOpen] = useState(false);
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
+    // Each dropdown owns its open state and closes on an outside click or Escape.
+    const notify = useDropdown();
+    const profile = useDropdown();
+
+    const handleLogout = async (event) => {
+        event.preventDefault();
+        await logout();
+        navigate('/login');
+    };
+
     return (
         <div>
             {/*Desktop Menu Start*/}
@@ -107,11 +120,11 @@ export default function App() {
                                     </svg>
                                 </a>
                             </li>
-                            <li className="nav-item _header_nav_item">
+                            <li className="nav-item _header_nav_item" ref={notify.ref}>
                                 <span
                                     id="_notify_btn"
                                     className="nav-link _header_nav_link _header_notify_btn"
-                                    onClick={() => setNotifyOpen((open) => !open)}
+                                    onClick={notify.toggle}
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -129,7 +142,7 @@ export default function App() {
                                         />
                                     </svg>
                                     <span className="_counting">6</span>
-                                    <div id="_notify_drop" className={`_notification_dropdown${notifyOpen ? ' show' : ''}`}>
+                                    <div id="_notify_drop" className={`_notification_dropdown${notify.open ? ' show' : ''}`}>
                                         <div className="_notifications_content">
                                             <h4 className="_notifications_content_title">
                                                 Notifications
@@ -606,7 +619,7 @@ export default function App() {
                                 </a>
                             </li>
                         </ul>
-                        <div className="_header_nav_profile">
+                        <div className="_header_nav_profile" ref={profile.ref}>
                             <div className="_header_nav_profile_image">
                                 <img
                                     src="assets/images/profile.png"
@@ -615,11 +628,13 @@ export default function App() {
                                 />
                             </div>
                             <div className="_header_nav_dropdown">
-                                <p className="_header_nav_para">Dylan Field</p>
+                                <p className="_header_nav_para">{user?.name ?? 'Dylan Field'}</p>
                                 <button
                                     id="_profile_drop_show_btn"
                                     className="_header_nav_dropdown_btn _dropdown_toggle"
                                     type="button"
+                                    onClick={profile.toggle}
+                                    aria-expanded={profile.open}
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -638,7 +653,9 @@ export default function App() {
                             {/* dropdown */}
                             <div
                                 id="_prfoile_drop"
-                                className="_nav_profile_dropdown _profile_dropdown"
+                                className={`_nav_profile_dropdown _profile_dropdown${
+                                    profile.open ? ' show' : ''
+                                }`}
                             >
                                 <div className="_nav_profile_dropdown_info">
                                     <div className="_nav_profile_dropdown_image">
@@ -649,7 +666,7 @@ export default function App() {
                                         />
                                     </div>
                                     <div className="_nav_profile_dropdown_info_txt">
-                                        <h4 className="_nav_dropdown_title">Dylan Field</h4>
+                                        <h4 className="_nav_dropdown_title">{user?.name ?? 'Dylan Field'}</h4>
                                         <a href="profile.html" className="_nav_drop_profile">
                                             View Profile
                                         </a>
@@ -740,7 +757,7 @@ export default function App() {
                                         </a>
                                     </li>
                                     <li className="_nav_dropdown_list_item">
-                                        <a href="#0" className="_nav_dropdown_link">
+                                        <a href="#0" className="_nav_dropdown_link" onClick={handleLogout}>
                                             <div className="_nav_drop_info">
                                                 <span>
                                                     <svg
