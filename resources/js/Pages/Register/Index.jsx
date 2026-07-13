@@ -1,6 +1,31 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from './../../services/AuthServiceProvider';
+
 export default function App() {
+    const { register } = useAuth();
+    const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
+    const [error, setError] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
+    // Handle form submission
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        setError(null);
+        setSubmitting(true);
 
+        try {
+            await register({ email, password, passwordConfirmation });
+            navigate('/');
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
     return (
         <div>
             <section className="_social_registration_wrapper _layout_main_wrapper">
@@ -45,20 +70,22 @@ export default function App() {
                                         <div className="row">
                                             <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                                 <div className="_social_registration_form_input _mar_b14">
-                                                    <label className="_social_registration_label _mar_b8">Email</label>
-                                                    <input type="email" className="form-control _social_registration_input" />
+                                                    <label className="_social_registration_label _mar_b8" value={email} onChange={(e) => setEmail(e.target.value)}>
+                                                        Email
+                                                    </label>
+                                                    <input type="email" className="form-control _social_registration_input" value={email} onChange={(e) => setEmail(e.target.value)} />
                                                 </div>
                                             </div>
                                             <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                                 <div className="_social_registration_form_input _mar_b14">
                                                     <label className="_social_registration_label _mar_b8">Password</label>
-                                                    <input type="password" className="form-control _social_registration_input" />
+                                                    <input type="password" className="form-control _social_registration_input" value={password} onChange={(e) => setPassword(e.target.value)} />
                                                 </div>
                                             </div>
                                             <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                                 <div className="_social_registration_form_input _mar_b14">
                                                     <label className="_social_registration_label _mar_b8">Repeat Password</label>
-                                                    <input type="password" className="form-control _social_registration_input" />
+                                                    <input type="password" className="form-control _social_registration_input" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} />
                                                 </div>
                                             </div>
                                         </div>
@@ -70,18 +97,25 @@ export default function App() {
                                                 </div>
                                             </div>
                                         </div>
+                                        {error && (
+                                            <div className="row">
+                                                <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
+                                                    <p className="text-danger">{error}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="row">
                                             <div className="col-lg-12 col-md-12 col-xl-12 col-sm-12">
-                                                <div className="_social_registration_form_btn _mar_t40 _mar_b60">
-                                                    <button type="button" className="_social_registration_form_btn_link _btn1">Login now</button>
-                                                </div>
+                                                <button type="submit" className="_social_registration_form_btn _mar_t40 _mar_b60" disabled={submitting}>
+                                                    {submitting ? 'Registering…' : 'Register now'}
+                                                </button>
                                             </div>
                                         </div>
                                     </form>
                                     <div className="row">
                                         <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                                             <div className="_social_registration_bottom_txt">
-                                                <p className="_social_registration_bottom_txt_para">Dont have an account? <a href="#0">Create New Account</a>
+                                                <p className="_social_registration_bottom_txt_para">Already have an account? <Link to="/login">Login</Link>
                                                 </p>
                                             </div>
                                         </div>

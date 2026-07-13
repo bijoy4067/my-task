@@ -1,5 +1,7 @@
 import Header from "../../components/Header";
 import LeftSideBar from "../../components/LeftSideBar";
+import MiddleLayout from "../../components/MiddleLayout";
+import RightSideBar from "../../components/RightSideBar";
 
 export default function App() {
 	return (

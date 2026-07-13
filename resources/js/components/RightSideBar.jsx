@@ -1,7 +1,6 @@
 export default function App() {
     return (
-        <div>
-            <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
+        <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
                 <div className="_layout_right_sidebar_wrap">
                     <div className="_layout_right_sidebar_inner">
                         <div className="_right_inner_area_info _padd_t24  _padd_b24 _padd_r24 _padd_l24 _b_radious6 _feed_inner_area">
@@ -398,6 +397,5 @@ export default function App() {
                     </div>
                 </div>
             </div>
-        </div>
     );
 }
