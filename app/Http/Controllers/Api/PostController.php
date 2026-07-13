@@ -7,6 +7,9 @@ use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Models\User;
+use App\Support\PostLikes;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -16,8 +19,7 @@ class PostController extends Controller
     {
         Gate::authorize('view', $post);
 
-        $post->load(['user', 'media', 'event'])
-            ->setAttribute('liked_by_me', $post->isLikedBy(request()->user()));
+        $this->present($post, request()->user());
 
         return PostResource::make($post);
     }
@@ -53,7 +55,7 @@ class PostController extends Controller
             return $post;
         });
 
-        $post->load(['user', 'media', 'event'])->setAttribute('liked_by_me', false);
+        $this->present($post, $request->user());
 
         return PostResource::make($post)->response()->setStatusCode(201);
     }
@@ -103,8 +105,7 @@ class PostController extends Controller
             }
         });
 
-        $post->load(['user', 'media', 'event'])
-            ->setAttribute('liked_by_me', $post->isLikedBy($request->user()));
+        $this->present($post, $request->user());
 
         return PostResource::make($post);
     }
@@ -117,5 +118,16 @@ class PostController extends Controller
         $post->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Load everything PostResource reads off a single post: its relations, plus the two
+     * like fields that no column can answer (`liked_by_me`, `likers_preview`).
+     */
+    private function present(Post $post, ?User $user): void
+    {
+        $post->load(['user', 'media', 'event']);
+
+        PostLikes::hydrate(new Collection([$post]), $user);
     }
 }

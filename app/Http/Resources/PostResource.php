@@ -22,8 +22,11 @@ class PostResource extends JsonResource
 
             'likes_count' => $this->likes_count,
             'comments_count' => $this->comments_count,
-            // Set in bulk by the controller — never resolved per post, which would be an N+1.
+            // Both are set in bulk by App\Support\PostLikes before serialization — resolving
+            // them here, per post, would be an N+1.
             'liked_by_me' => (bool) $this->liked_by_me,
+            // The overlapping reactor avatars on the card; the count badge sits on the end of them.
+            'likers_preview' => $this->likers_preview ?? [],
 
             'author' => [
                 'id' => $this->user->id,

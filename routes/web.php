@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FeedController;
+use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\PostController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,15 @@ Route::middleware('auth')->group(function () {
     // that sets _method=PUT, and Laravel's MethodOverride middleware routes it here.
     Route::put('/api/posts/{post}', [PostController::class, 'update'])->middleware('throttle:30,1');
     Route::delete('/api/posts/{post}', [PostController::class, 'destroy']);
+
+    // Liking is a toggle, so it gets a looser throttle than posting — tapping the button on
+    // and off a few times is normal use, not abuse.
+    Route::get('/api/posts/{post}/likes', [LikeController::class, 'index']);
+    Route::post('/api/posts/{post}/like', [LikeController::class, 'store'])->middleware('throttle:60,1');
+    Route::delete('/api/posts/{post}/like', [LikeController::class, 'destroy'])->middleware('throttle:60,1');
+    Route::post('/api/comments/{comment}/like', [LikeController::class, 'storeComment'])->middleware('throttle:60,1');
+    Route::delete('/api/comments/{comment}/like', [LikeController::class, 'destroyComment'])->middleware('throttle:60,1');
+
     Route::get('/api/media/{media}', [MediaController::class, 'show'])->name('media.show');
 });
 

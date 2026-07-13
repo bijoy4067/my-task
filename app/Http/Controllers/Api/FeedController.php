@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PostResource;
-use App\Models\Like;
 use App\Models\Post;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use App\Support\PostLikes;
 use Illuminate\Http\Request;
 
 class FeedController extends Controller
@@ -37,32 +35,13 @@ class FeedController extends Controller
         $hasMore = $posts->count() > $limit;
         $posts = $posts->take($limit);
 
-        self::markLikedBy($posts, $user);
+        // Resolves `liked_by_me` and the reactor avatar row for the whole page in two queries.
+        PostLikes::hydrate($posts, $user);
 
         return PostResource::collection($posts)->additional([
             'meta' => [
                 'next_cursor' => $hasMore ? $posts->last()->id : null,
             ],
         ]);
-    }
-
-    /**
-     * Resolve "did I like this?" for a whole page in one query. Calling
-     * Likeable::isLikedBy() per post inside a loop would be an N+1.
-     *
-     * @param  Collection<int, Post>  $posts
-     */
-    public static function markLikedBy(Collection $posts, User $user): void
-    {
-        $likedIds = $posts->isEmpty() ? [] : Like::query()
-            ->where('user_id', $user->id)
-            ->where('likeable_type', Post::class)
-            ->whereIn('likeable_id', $posts->pluck('id'))
-            ->pluck('likeable_id')
-            ->all();
-
-        $posts->each(fn (Post $post) => $post->setAttribute(
-            'liked_by_me', in_array($post->id, $likedIds, true)
-        ));
     }
 }
