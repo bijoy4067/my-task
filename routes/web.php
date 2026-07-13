@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\MediaController;
@@ -29,6 +30,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/posts/{post}/like', [LikeController::class, 'destroy'])->middleware('throttle:60,1');
     Route::post('/api/comments/{comment}/like', [LikeController::class, 'storeComment'])->middleware('throttle:60,1');
     Route::delete('/api/comments/{comment}/like', [LikeController::class, 'destroyComment'])->middleware('throttle:60,1');
+
+    Route::get('/api/posts/{post}/comments', [CommentController::class, 'index']);
+    Route::post('/api/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:30,1');
+    Route::put('/api/comments/{comment}', [CommentController::class, 'update'])->middleware('throttle:30,1');
+    Route::delete('/api/comments/{comment}', [CommentController::class, 'destroy']);
 
     Route::get('/api/media/{media}', [MediaController::class, 'show'])->name('media.show');
 });

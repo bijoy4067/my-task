@@ -34,16 +34,8 @@ class PostLikes
      */
     public static function markLikedBy(Collection $posts, ?User $user): void
     {
-        $likedIds = ($user === null || $posts->isEmpty()) ? [] : DB::table('likes')
-            ->where('user_id', $user->id)
-            ->where('likeable_type', (new Post)->getMorphClass())
-            ->whereIn('likeable_id', $posts->modelKeys())
-            ->pluck('likeable_id')
-            ->all();
-
-        $posts->each(fn (Post $post) => $post->setAttribute(
-            'liked_by_me', in_array($post->id, $likedIds, true)
-        ));
+        // Nothing post-specific about this half — comments resolve it the same way.
+        Likes::markLikedBy($posts, $user);
     }
 
     /**
