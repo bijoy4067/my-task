@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { apiFetch } from '../Helper/ApiFetcher';
+import { apiFetch } from '../utils/ApiFetcher';
 
 const AutServiceProvider = createContext(null);
 

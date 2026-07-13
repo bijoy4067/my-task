@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '../Services/AutServiceProvider';
+import { AuthProvider } from '../services/AutServiceProvider';
 import Login from './Login/Index';
 import Register from './Register/Index';
 import Feed from './Feed/Index';

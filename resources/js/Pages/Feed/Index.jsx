@@ -1,5 +1,5 @@
-import Header from "./Components/Header";
-import LeftSideBar from "./Components/LeftSideBar";
+import Header from "../../components/Header";
+import LeftSideBar from "../../components/LeftSideBar";
 
 export default function App() {
 	return (

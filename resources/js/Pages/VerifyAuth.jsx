@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../Services/AutServiceProvider';
+import { useAuth } from '../services/AutServiceProvider';
 
 export default function VerifyAuth({ children }) {
     const { user, loading } = useAuth();
