@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 export default function App() {
+    const [notifyOpen, setNotifyOpen] = useState(false);
     return (
         <div>
             {/*Desktop Menu Start*/}
@@ -107,6 +111,7 @@ export default function App() {
                                 <span
                                     id="_notify_btn"
                                     className="nav-link _header_nav_link _header_notify_btn"
+                                    onClick={() => setNotifyOpen((open) => !open)}
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -124,7 +129,7 @@ export default function App() {
                                         />
                                     </svg>
                                     <span className="_counting">6</span>
-                                    <div id="_notify_drop" className="_notification_dropdown">
+                                    <div id="_notify_drop" className={`_notification_dropdown${notifyOpen ? ' show' : ''}`}>
                                         <div className="_notifications_content">
                                             <h4 className="_notifications_content_title">
                                                 Notifications

@@ -1,9 +1,38 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from './../../services/AuthServiceProvider';
+import apiFetch from './../../utils/ApiFetcher';
+
 import Header from "../../components/Header";
 import LeftSideBar from "../../components/LeftSideBar";
 import MiddleLayout from "../../components/MiddleLayout";
 import RightSideBar from "../../components/RightSideBar";
 
 export default function App() {
+
+	const { logout } = useAuth();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		let ignore = false;
+
+		apiFetch('/api/feed').then((response) => {
+			if (ignore) return;
+			if (response.status === 401) {
+				navigate('/login');
+			}
+		});
+
+		return () => {
+			ignore = true;
+		};
+	}, [navigate]);
+
+	const handleLogout = async (event) => {
+		event.preventDefault();
+		await logout();
+		navigate('/login');
+	};
 	return (
 		<div>
 			{/*Feed Section Start*/}

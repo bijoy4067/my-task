@@ -8,6 +8,9 @@ Route::post('/api/register', [AuthController::class, 'register']);
 Route::post('/api/login', [AuthController::class, 'login']);
 Route::post('/api/logout', [AuthController::class, 'logout'])->middleware('auth');
 Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');
+// TODO: FeedController doesn't exist yet — re-enable once it's built.
+// Route::get('/api/feed', [FeedController::class, 'index'])->middleware('auth');
+
 Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '.*');
