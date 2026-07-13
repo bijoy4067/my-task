@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 export default function App() {
   return (
     <div>
@@ -165,7 +166,7 @@ export default function App() {
                       <div className="_social_login_bottom_txt">
                         <p className="_social_login_bottom_txt_para">
                           Don't have an account?{" "}
-                          <a href="#0">Create New Account</a>
+                          <Link to="/register">Create New Account</Link>
                         </p>
                       </div>
                     </div>
