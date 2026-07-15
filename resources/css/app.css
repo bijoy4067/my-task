@@ -7,3 +7,54 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* ---------- Comment thread ----------
+   Loaded after assets/css/main.css, so these override the template.
+
+   The template's action row is a line of <span>s pinned under the comment bubble, and the
+   bubble is `max-width: fit-content`. Ours are <button>s, because they now actually do
+   something, and there are more of them (Edit, Delete). On a two-character comment the
+   bubble is tiny, and both of those bite: the browser's default button chrome shows through,
+   and the row wraps inside that narrow box and collides with itself. */
+._comment_reply_list li button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    line-height: 1;
+}
+
+._comment_reply_list li button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* The row is absolutely positioned, so refusing to wrap lets it run past the edge of a short
+   bubble — which is what the design does — instead of stacking on top of itself. */
+._comment_reply_num {
+    white-space: nowrap;
+}
+
+/* A posted comment slides in rather than snapping into place, so it reads as *arriving*
+   somewhere in a list rather than as the page having quietly changed under you. Only newly
+   mounted comments animate; the ones already on screen never re-run it. */
+@keyframes _comment_arrive {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+._comment_main {
+    animation: _comment_arrive 0.28s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ._comment_main {
+        animation: none;
+    }
+}

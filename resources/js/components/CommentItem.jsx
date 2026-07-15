@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { apiFetch, parseErrorMessage } from "../utils/ApiFetcher";
-import { formatTimeAgo } from "../utils/formatTimeAgo";
+import { formatTimeAgoShort } from "../utils/formatTimeAgo";
 import { useLikeToggle } from "../hooks/useLikeToggle";
 import CommentBox from "./CommentBox";
 
@@ -218,7 +218,7 @@ export default function CommentItem({
                                 )}
                                 <li>
                                     <span className="_time_link">
-                                        .{formatTimeAgo(comment.created_at)}
+                                        .{formatTimeAgoShort(comment.created_at)}
                                     </span>
                                 </li>
                             </ul>
