@@ -16,7 +16,10 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState(null);
     const [showLikers, setShowLikers] = useState(false);
-    const [showComments, setShowComments] = useState(false);
+    // The composer sits under every post from the start, as in the template — you should be
+    // able to type a comment without first asking for the box. The Comment button collapses
+    // the thread again rather than opening it.
+    const [showComments, setShowComments] = useState(true);
 
     // The card doesn't own the post — the feed does. Patches go back up to useFeed, which
     // re-renders this card with the new counts. No local copy to drift out of sync.
@@ -463,10 +466,12 @@ export default function PostCard({ post, onDeleted, onHidden, onUpdated }) {
                 </button>
             </div>
 
-            {/* Mounted only once the thread is opened, so a feed of ten posts doesn't fetch
-                ten sets of comments nobody asked to read. */}
             {showComments && (
-                <CommentList postId={post.id} onCountChanged={shiftCommentCount} />
+                <CommentList
+                    postId={post.id}
+                    commentsCount={post.comments_count}
+                    onCountChanged={shiftCommentCount}
+                />
             )}
         </div>
     );

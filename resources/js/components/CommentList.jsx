@@ -11,7 +11,7 @@ import CommentItem from "./CommentItem";
  * back through `onCountChanged` — a reply counts toward the post's total just like a
  * top-level comment, and deleting a parent takes its whole subtree out of it.
  */
-export default function CommentList({ postId, onCountChanged }) {
+export default function CommentList({ postId, commentsCount = 0, onCountChanged }) {
     const {
         comments,
         loading,
@@ -23,9 +23,12 @@ export default function CommentList({ postId, onCountChanged }) {
         removeComment,
     } = useComments(postId);
 
+    // Every card shows its composer, so this mounts for every post in the feed — but a post
+    // with no comments has nothing to fetch, and asking anyway would put an empty request
+    // behind each one of them.
     useEffect(() => {
-        loadMore();
-        // Intentionally runs once, when the thread is first opened.
+        if (commentsCount > 0) loadMore();
+        // Intentionally runs once, on mount.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
