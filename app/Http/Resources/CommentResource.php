@@ -10,12 +10,23 @@ class CommentResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $request->user();
+        $audio = $this->getFirstMedia('audio');
 
         return [
             'id' => $this->id,
             'parent_id' => $this->parent_id,
             'body' => $this->body,
             'created_at' => $this->created_at->toIso8601String(),
+
+            // Attachments stream through MediaController rather than sitting on a public disk,
+            // so a comment on a private post stays behind that post's policy.
+            'images' => $this->getMedia('images')
+                ->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => route('media.show', $image),
+                ])
+                ->values(),
+            'audio_url' => $audio ? route('media.show', $audio) : null,
 
             'likes_count' => $this->likes_count,
             'replies_count' => $this->replies_count,

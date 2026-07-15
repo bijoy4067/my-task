@@ -7,11 +7,21 @@ use App\Models\Like;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CommentTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Keep uploaded fixtures out of the real storage directory.
+        Storage::fake('local');
+    }
 
     public function test_commenting_is_closed_to_guests(): void
     {
@@ -270,6 +280,109 @@ class CommentTest extends TestCase
         $this->actingAs($user)->deleteJson("/api/comments/{$comment->id}")->assertNoContent();
 
         $this->assertSame(0, Like::where('likeable_type', Comment::class)->count());
+    }
+
+    public function test_it_attaches_images_to_a_comment(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->public()->for(User::factory())->create();
+
+        $response = $this->actingAs($user)->postJson("/api/posts/{$post->id}/comments", [
+            'body' => 'Look at these',
+            'images' => [
+                UploadedFile::fake()->image('one.jpg'),
+                UploadedFile::fake()->image('two.png'),
+            ],
+        ])->assertCreated();
+
+        $this->assertCount(2, $response->json('data.images'));
+        $this->assertNull($response->json('data.audio_url'));
+
+        $comment = Comment::find($response->json('data.id'));
+        $this->assertCount(2, $comment->getMedia('images'));
+    }
+
+    public function test_it_attaches_a_voice_note_to_a_comment(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->public()->for(User::factory())->create();
+
+        // What MediaRecorder actually hands back in Chrome: an audio-only WebM, which sniffs
+        // as video/webm because the container carries no hint that there is no video track.
+        $response = $this->actingAs($user)->postJson("/api/posts/{$post->id}/comments", [
+            'audio' => UploadedFile::fake()->create('voice.webm', 64, 'video/webm'),
+        ])->assertCreated();
+
+        $this->assertNotNull($response->json('data.audio_url'));
+        // A voice note says enough on its own — no body required.
+        $this->assertNull($response->json('data.body'));
+    }
+
+    /**
+     * Images and a voice note in one comment. This is a regression guard: adding the images
+     * moves their temp files, and resolving the audio through the container's request rather
+     * than this validated one would then re-wrap those moved paths and throw.
+     */
+    public function test_it_attaches_images_and_a_voice_note_together(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->public()->for(User::factory())->create();
+
+        $response = $this->actingAs($user)->postJson("/api/posts/{$post->id}/comments", [
+            'body' => 'Both at once',
+            'images' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.png'),
+            ],
+            'audio' => UploadedFile::fake()->create('voice.webm', 64, 'video/webm'),
+        ])->assertCreated();
+
+        $this->assertCount(2, $response->json('data.images'));
+        $this->assertNotNull($response->json('data.audio_url'));
+
+        $comment = Comment::find($response->json('data.id'));
+        $this->assertCount(2, $comment->getMedia('images'));
+        $this->assertCount(1, $comment->getMedia('audio'));
+    }
+
+    public function test_a_comment_must_carry_something(): void
+    {
+        $post = Post::factory()->public()->for(User::factory())->create();
+
+        $this->actingAs(User::factory()->create())
+            ->postJson("/api/posts/{$post->id}/comments", [])
+            ->assertJsonValidationErrorFor('body');
+
+        $this->assertSame(0, $post->fresh()->comments_count);
+    }
+
+    public function test_it_rejects_a_disguised_file_as_an_image(): void
+    {
+        $post = Post::factory()->public()->for(User::factory())->create();
+
+        $this->actingAs(User::factory()->create())
+            ->postJson("/api/posts/{$post->id}/comments", [
+                'body' => 'Sneaky',
+                'images' => [UploadedFile::fake()->create('shell.jpg', 8, 'application/x-php')],
+            ])
+            ->assertJsonValidationErrorFor('images.0');
+    }
+
+    public function test_a_comment_attachment_on_a_private_post_is_not_readable_by_a_stranger(): void
+    {
+        $author = User::factory()->create();
+        $post = Post::factory()->private()->for($author)->create();
+
+        $id = $this->actingAs($author)->postJson("/api/posts/{$post->id}/comments", [
+            'body' => 'Private thoughts',
+            'images' => [UploadedFile::fake()->image('secret.jpg')],
+        ])->assertCreated()->json('data.id');
+
+        $media = Comment::find($id)->getFirstMedia('images');
+
+        // The author can stream it; a stranger is turned away by the post's own policy.
+        $this->actingAs($author)->get("/api/media/{$media->id}")->assertOk();
+        $this->actingAs(User::factory()->create())->get("/api/media/{$media->id}")->assertForbidden();
     }
 
     public function test_the_feed_reports_the_comment_count(): void

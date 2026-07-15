@@ -41,10 +41,12 @@ class CommentController extends Controller
             ->whereNull('parent_id')
             ->with([
                 'user.media',
+                // The comment's own attachments — its images and voice note.
+                'media',
                 // Replies come back with their parent rather than per comment — one query for
                 // the whole page. They are bounded: the thread is only ever one level deep,
                 // so this cannot fan out the way an unbounded tree would.
-                'replies' => fn ($query) => $query->with('user.media')->orderBy('id'),
+                'replies' => fn ($query) => $query->with(['user.media', 'media'])->orderBy('id'),
             ])
             ->when(
                 $validated['cursor'] ?? null,
@@ -77,12 +79,24 @@ class CommentController extends Controller
             // `post_id` and `user_id` are not fillable on Comment, so neither can be spoofed
             // through the request body — the relation and the authenticated user set them.
             $comment = new Comment([
-                'body' => $validated['body'],
+                'body' => $validated['body'] ?? null,
                 'parent_id' => $validated['parent_id'] ?? null,
             ]);
 
             $comment->user()->associate($request->user());
             $post->comments()->save($comment);
+
+            // Both are read off the FormRequest, whose uploaded-file bag was already resolved
+            // during validation. addMediaFromRequest() would instead go through the container's
+            // original request and re-resolve every uploaded file — and by then the image
+            // temp files have been moved, so re-wrapping them throws "file does not exist".
+            foreach ($request->file('images', []) as $image) {
+                $comment->addMedia($image)->toMediaCollection('images');
+            }
+
+            if ($audio = $request->file('audio')) {
+                $comment->addMedia($audio)->toMediaCollection('audio');
+            }
 
             // The card's "N Comment" counts the whole thread, replies included.
             $post->increment('comments_count');
@@ -100,7 +114,7 @@ class CommentController extends Controller
 
         $this->markThreadLikedBy(new Collection([$comment]), $request->user());
 
-        return CommentResource::make($comment->load('user.media'))
+        return CommentResource::make($comment->load(['user.media', 'media']))
             ->response()
             ->setStatusCode(201);
     }
@@ -113,7 +127,7 @@ class CommentController extends Controller
 
         $this->markThreadLikedBy(new Collection([$comment]), $request->user());
 
-        return CommentResource::make($comment->load('user.media'));
+        return CommentResource::make($comment->load(['user.media', 'media']));
     }
 
     public function destroy(Comment $comment)
@@ -142,6 +156,11 @@ class CommentController extends Controller
                     ->where('replies_count', '>', 0)
                     ->decrement('replies_count');
             }
+
+            // The replies would go by cascade anyway, but a cascade is invisible to the media
+            // library — their images and voice notes would be left on disk with no row
+            // pointing at them. Deleting each reply as a model lets that cleanup run.
+            $comment->replies->each->delete();
 
             $comment->delete();
         });
