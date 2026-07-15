@@ -199,68 +199,70 @@ export default function CommentItem({
                             <span className="_total">{comment.likes_count}</span>
                         </div>
                     )}
+                </div>
 
-                    <div className="_comment_reply">
-                        <div className="_comment_reply_num">
-                            <ul className="_comment_reply_list">
+                {/* The action row lives in normal flow below the bubble, not pinned inside it,
+                    so it never collides with a reply or the reaction pill (see app.css). */}
+                <div className="_comment_reply">
+                    <div className="_comment_reply_num">
+                        <ul className="_comment_reply_list">
+                            <li>
+                                <button
+                                    type="button"
+                                    onClick={like.toggle}
+                                    aria-pressed={comment.liked_by_me}
+                                >
+                                    <span
+                                        style={{
+                                            fontWeight: comment.liked_by_me ? 700 : undefined,
+                                            color: comment.liked_by_me ? "#1890FF" : undefined,
+                                        }}
+                                    >
+                                        Like.
+                                    </span>
+                                </button>
+                            </li>
+                            {/* A reply cannot itself be replied to — the server rejects it,
+                                so the control isn't offered. Replying to a reply is done
+                                from its parent. */}
+                            {!isReply && (
                                 <li>
                                     <button
                                         type="button"
-                                        onClick={like.toggle}
-                                        aria-pressed={comment.liked_by_me}
+                                        onClick={() => setReplying((open) => !open)}
                                     >
-                                        <span
-                                            style={{
-                                                fontWeight: comment.liked_by_me ? 700 : undefined,
-                                                color: comment.liked_by_me ? "#1890FF" : undefined,
-                                            }}
-                                        >
-                                            Like.
-                                        </span>
+                                        <span>Reply.</span>
                                     </button>
                                 </li>
-                                {/* A reply cannot itself be replied to — the server rejects it,
-                                    so the control isn't offered. Replying to a reply is done
-                                    from its parent. */}
-                                {!isReply && (
-                                    <li>
-                                        <button
-                                            type="button"
-                                            onClick={() => setReplying((open) => !open)}
-                                        >
-                                            <span>Reply.</span>
-                                        </button>
-                                    </li>
-                                )}
-                                {comment.permissions.update && (
-                                    <li>
-                                        <button type="button" onClick={() => setEditing(true)}>
-                                            <span>Edit.</span>
-                                        </button>
-                                    </li>
-                                )}
-                                {comment.permissions.delete && (
-                                    <li>
-                                        <button type="button" onClick={remove} disabled={busy}>
-                                            <span>Delete.</span>
-                                        </button>
-                                    </li>
-                                )}
+                            )}
+                            {comment.permissions.update && (
                                 <li>
-                                    <span className="_time_link">
-                                        .{formatTimeAgoShort(comment.created_at)}
-                                    </span>
+                                    <button type="button" onClick={() => setEditing(true)}>
+                                        <span>Edit.</span>
+                                    </button>
                                 </li>
-                            </ul>
-                        </div>
+                            )}
+                            {comment.permissions.delete && (
+                                <li>
+                                    <button type="button" onClick={remove} disabled={busy}>
+                                        <span>Delete.</span>
+                                    </button>
+                                </li>
+                            )}
+                            <li>
+                                <span className="_time_link">
+                                    .{formatTimeAgoShort(comment.created_at)}
+                                </span>
+                            </li>
+                        </ul>
                     </div>
-
-                    {(error || like.error) && (
-                        <p className="_feed_inner_timeline_post_box_para" role="alert">
-                            {error || like.error}
-                        </p>
-                    )}
                 </div>
+
+                {(error || like.error) && (
+                    <p className="_feed_inner_timeline_post_box_para" role="alert">
+                        {error || like.error}
+                    </p>
+                )}
 
                 {comment.replies?.map((reply) => (
                     <CommentItem

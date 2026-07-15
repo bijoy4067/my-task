@@ -29,10 +29,34 @@
     cursor: default;
 }
 
-/* The row is absolutely positioned, so refusing to wrap lets it run past the edge of a short
-   bubble — which is what the design does — instead of stacking on top of itself. */
+/* The template hangs the action row absolutely at `bottom: -37px` inside the bubble and pays
+   for it with a fixed `margin: 0 0 50px` reserve. That only holds for a lone comment: our
+   replies render as siblings right under the bubble, so a 37px-deep row reaching past its
+   50px reserve lands on the next reply — and any row taller than the guessed 37px (a wrapped
+   name, a reaction pill) collides too. Lay the row out in normal flow beneath the bubble
+   instead, and the whole class of overlap goes away. */
+._comment_details {
+    margin: 0 0 6px;
+}
+
 ._comment_reply_num {
+    position: static;
+    bottom: auto;
     white-space: nowrap;
+}
+
+/* Space between the row and whatever comes next — the following comment, a reply, or the
+   reply composer. */
+._comment_reply {
+    margin: 4px 0 14px;
+}
+
+/* The reaction count keeps its Facebook-style perch on the bubble's lower-right corner; with
+   the row no longer occupying that spot it just anchors to the bottom edge. The row is
+   left-aligned, so the two never meet horizontally. */
+._total_reactions {
+    top: auto;
+    bottom: -12px;
 }
 
 /* A posted comment slides in rather than snapping into place, so it reads as *arriving*
