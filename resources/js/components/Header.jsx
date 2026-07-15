@@ -869,6 +869,7 @@ export default function App() {
                                         <a
                                             href="#0"
                                             className="_nav_dropdown_link"
+                                            onClick={handleLogout}
                                         >
                                             <div className="_nav_drop_info">
                                                 <span>
