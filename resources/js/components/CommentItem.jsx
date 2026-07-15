@@ -137,11 +137,41 @@ export default function CommentItem({
                             </div>
                         </form>
                     ) : (
-                        <div className="_comment_status">
-                            <p className="_comment_status_text">
-                                <span>{comment.body}</span>
-                            </p>
-                        </div>
+                        <>
+                            {comment.body && (
+                                <div className="_comment_status">
+                                    <p className="_comment_status_text">
+                                        <span>{comment.body}</span>
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* A comment can be nothing but a picture or a voice note, so the
+                                attachments render whether or not there is any text above them. */}
+                            {comment.images?.length > 0 && (
+                                <div className="_comment_media">
+                                    {comment.images.map((image) => (
+                                        <a
+                                            key={image.id}
+                                            href={image.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            <img src={image.url} alt="" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+
+                            {comment.audio_url && (
+                                <audio
+                                    className="_comment_audio"
+                                    src={comment.audio_url}
+                                    controls
+                                    preload="metadata"
+                                />
+                            )}
+                        </>
                     )}
 
                     {/* The template shows this pill only when there is something in it — an
